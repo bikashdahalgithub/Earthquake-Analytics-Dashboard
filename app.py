@@ -4,24 +4,14 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pydeck as pdk
 
-# -----------------------------
-# PAGE CONFIG
-# -----------------------------
 st.set_page_config(page_title="Earthquake Dashboard", layout="wide")
 
-# -----------------------------
-# LOAD DATA
-# -----------------------------
 @st.cache_data
 def load_data():
     df = pd.read_csv("Earthquake_clean.csv")
     return df
 
 df = load_data()
-
-# -----------------------------
-# DATA PREPROCESSING
-# -----------------------------
 df.columns = df.columns.str.strip()
 
 df['fromdate'] = pd.to_datetime(df['fromdate'], errors='coerce')
@@ -30,10 +20,6 @@ df.rename(columns={
     'Earthquake Magnitude (M)': 'magnitude',
     'Depth (km)': 'depth'
 }, inplace=True)
-
-# -----------------------------
-# SIDEBAR
-# -----------------------------
 st.sidebar.markdown("## 🎛️ Dashboard Filters")
 st.sidebar.markdown("---")
 
@@ -54,10 +40,6 @@ mag_range = st.sidebar.slider(
     max_mag,
     (min_mag, max_mag)
 )
-
-# -----------------------------
-# FILTER DATA
-# -----------------------------
 if len(date_range) == 2:
     start_date = pd.to_datetime(date_range[0])
     end_date = pd.to_datetime(date_range[1])
@@ -71,10 +53,6 @@ filtered_df = df[
     (df['magnitude'] >= mag_range[0]) &
     (df['magnitude'] <= mag_range[1])
 ]
-
-# -----------------------------
-# TITLE
-# -----------------------------
 st.markdown("""
     <h1 style='text-align: center; color: #1f77b4;'>
     🌍 Earthquake Analytics Dashboard
@@ -82,10 +60,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.markdown("---")
-
-# -----------------------------
-# KPI CARDS
-# -----------------------------
 k1, k2, k3, k4, k5 = st.columns(5)
 
 def kpi_card(title, value):
@@ -109,10 +83,6 @@ k4.markdown(kpi_card("Min Depth", round(filtered_df['depth'].min(), 2)), unsafe_
 k5.markdown(kpi_card("Max Depth", round(filtered_df['depth'].max(), 2)), unsafe_allow_html=True)
 
 st.markdown("---")
-
-# -----------------------------
-# MAP (TOP PRIORITY VISUAL)
-# -----------------------------
 st.markdown("## 🌍 Global Earthquake Map")
 
 map_df = filtered_df.dropna(subset=['latitude', 'longitude'])
@@ -140,10 +110,6 @@ st.pydeck_chart(pdk.Deck(
 ))
 
 st.markdown("---")
-
-# -----------------------------
-# CHARTS (GRID LAYOUT)
-# -----------------------------
 col1, col2 = st.columns(2)
 
 with col1:
@@ -169,10 +135,6 @@ with col4:
     st.subheader("Top Countries")
     top_loc = filtered_df['country'].value_counts().head(10)
     st.bar_chart(top_loc)
-
-# -----------------------------
-# HEATMAP
-# -----------------------------
 st.subheader("Correlation Heatmap")
 numeric_df = filtered_df.select_dtypes(include='number')
 
@@ -180,15 +142,9 @@ fig3, ax3 = plt.subplots(figsize=(10, 5))
 sns.heatmap(numeric_df.corr(), annot=True, cmap="coolwarm", ax=ax3)
 st.pyplot(fig3)
 
-# -----------------------------
-# RAW DATA
-# -----------------------------
 st.subheader("Raw Data")
 st.dataframe(filtered_df)
 
-# -----------------------------
-# FOOTER
-# -----------------------------
 st.markdown("---")
 st.markdown(
     "<center>Built with Streamlit | Earthquake Analytics Dashboard</center>",
