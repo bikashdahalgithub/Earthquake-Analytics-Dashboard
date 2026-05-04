@@ -1,7 +1,5 @@
 import streamlit as st
 import pandas as pd
-#import matplotlib.pyplot as plt
-#import seaborn as sns
 import plotly.express as px
 import pydeck as pdk
 
@@ -20,11 +18,12 @@ df['fromdate'] = pd.to_datetime(df['fromdate'], errors='coerce')
 
 df.rename(columns={
     'Earthquake Magnitude (M)': 'magnitude',
-    'Depth (km)': 'depth'
+    'Depth (km)': 'depth',
+    'Exposed Population (within 100 km)': 'population'
 }, inplace=True)
 
 # -------------------- SIDEBAR --------------------
-st.sidebar.markdown("## 🎛️ Filters")
+st.sidebar.markdown("##  Filters")
 st.sidebar.markdown("---")
 
 min_date = df['fromdate'].min()
@@ -39,7 +38,6 @@ mag_range = st.sidebar.slider(
     (float(df['magnitude'].min()), float(df['magnitude'].max()))
 )
 
-# Continent filter
 continents = sorted(df['continent'].dropna().unique())
 selected_continents = st.sidebar.multiselect(
     "Select Continents",
@@ -69,7 +67,7 @@ st.markdown("""
         text-align:center;
     ">
         <h1 style="color:white; font-weight:700; margin-bottom:5px;">
-            🌍 Earthquake Analytics Dashboard
+             Earthquake Analytics Dashboard
         </h1>
         <p style="color:#ffe6e6; font-size:15px;">
             Real-time insights into global seismic activity
@@ -93,9 +91,9 @@ def kpi_card(title, value):
         justify-content:center;
         align-items:center;
         box-shadow:0px 6px 14px rgba(0,0,0,0.15);
-        border-left:6px solid  #cc0000;
+        border-left:6px solid #cc0000;
     ">
-       <div style="
+        <div style="
             color:#800000;
             font-size:15px;
             font-weight:600;
@@ -116,8 +114,8 @@ def kpi_card(title, value):
 
 total_eq = len(filtered_df)
 
-population = (
-    int(filtered_df['population'].sum())
+population_affected = (
+    f"{int(filtered_df['population'].sum()):,}"
     if 'population' in filtered_df.columns else "N/A"
 )
 
@@ -129,14 +127,14 @@ top_country = (
 max_mag = round(filtered_df['magnitude'].max(), 2) if not filtered_df.empty else 0
 
 k1.markdown(kpi_card("Total Earthquakes", total_eq), unsafe_allow_html=True)
-k2.markdown(kpi_card("Total Population Affected", population), unsafe_allow_html=True)
+k2.markdown(kpi_card("Total Population Affected", population_affected), unsafe_allow_html=True)
 k3.markdown(kpi_card("Top Country Affected", top_country), unsafe_allow_html=True)
 k4.markdown(kpi_card("Max Magnitude", max_mag), unsafe_allow_html=True)
 
 st.markdown("---")
 
 # -------------------- MAP --------------------
-st.subheader("🌍 Global Earthquake Map")
+st.subheader("Global Earthquake Map")
 
 map_df = filtered_df.dropna(subset=['latitude', 'longitude'])
 
@@ -163,13 +161,68 @@ st.pydeck_chart(pdk.Deck(
 
 st.markdown("---")
 
-# -------------------- EDA (2x2 GRID - INTERACTIVE) --------------------
+# -------------------- EDA --------------------
+# Centered EDA heading
+st.markdown(
+    "<h2 style='text-align:center; margin-bottom:24px;'>Exploratory Data Analysis</h2>",
+    unsafe_allow_html=True
+)
 
+# ---- ROW 1: Top Countries + Earthquakes Over Time ----
 col1, col2 = st.columns(2)
 
-# 1. Magnitude Distribution (Histogram)
+# 1. Top 10 Countries (Bar Chart) — moved to top-left
 with col1:
+    st.subheader("Top 10 Countries")
+
+    top_loc = (
+        filtered_df['country']
+        .value_counts()
+        .head(10)
+        .sort_values()
+        .reset_index()
+    )
+    top_loc.columns = ['country', 'count']
+
+    fig4 = px.bar(
+        top_loc,
+        x='count',
+        y='country',
+        orientation='h',
+        color='count',
+        color_continuous_scale='Reds'
+    )
+
+    st.plotly_chart(fig4, use_container_width=True)
+
+# 2. Earthquakes Over Time (Cumulative Line) — moved to top-right
+with col2:
+    st.subheader("Earthquakes Over Time (Cumulative)")
+
+    time_series = (
+        filtered_df.groupby(filtered_df['fromdate'].dt.date)
+        .size()
+        .cumsum()
+        .reset_index()
+    )
+    time_series.columns = ['date', 'count']
+
+    fig3 = px.line(
+        time_series,
+        x='date',
+        y='count',
+        markers=True
+    )
+
+    st.plotly_chart(fig3, use_container_width=True)
+
+# ---- ROW 2: Magnitude Distribution + Alert Score Pie ----
+col3, col4 = st.columns(2)
+
+# 3. Magnitude Distribution (Histogram)
+with col3:
     st.subheader("Magnitude Distribution")
+
     fig1 = px.histogram(
         filtered_df,
         x='magnitude',
@@ -192,73 +245,72 @@ with col1:
 
     st.plotly_chart(fig1, use_container_width=True)
 
-
-# 2. Alert Score Distribution (Pie Chart)
-with col2:
+# 4. Alert Score Distribution (Pie Chart) — darker, varied colours
+with col4:
     st.subheader("Alert Score Distribution")
 
     alert_counts = filtered_df['alertscore'].value_counts().reset_index()
     alert_counts.columns = ['alertscore', 'count']
 
+    # Dark, distinct colour palette (not the default light Reds sequential)
+    dark_distinct_colors = [
+        '#7B0000',  # very dark red
+        '#B22222',  # firebrick
+        '#CC5500',  # burnt orange
+        '#8B4513',  # saddle brown
+        '#4B0082',  # indigo
+        '#006400',  # dark green
+        '#00008B',  # dark blue
+        '#556B2F',  # dark olive
+    ]
+
     fig2 = px.pie(
         alert_counts,
         names='alertscore',
         values='count',
-        color_discrete_sequence=px.colors.sequential.Reds
+        color_discrete_sequence=dark_distinct_colors
+    )
+
+    fig2.update_traces(
+        textfont_color='white',
+        pull=[0.03] * len(alert_counts)
     )
 
     st.plotly_chart(fig2, use_container_width=True)
 
+# ---- ROW 3: Population Affected Over Time (Line Chart) ----
+st.subheader("Total Population Affected Over Time")
 
-col3, col4 = st.columns(2)
+pop_time = (
+    filtered_df.dropna(subset=['population'])
+    .groupby(filtered_df['fromdate'].dt.date)['population']
+    .sum()
+    .cumsum()
+    .reset_index()
+)
+pop_time.columns = ['date', 'population']
 
-# 3. Earthquakes Over Time (Cumulative Line)
-with col3:
-    st.subheader("Earthquakes Over Time (Cumulative)")
+fig5 = px.line(
+    pop_time,
+    x='date',
+    y='population',
+    markers=True,
+    labels={'population': 'Cumulative Population Affected', 'date': 'Date'},
+    color_discrete_sequence=['#cc0000']
+)
 
-    time_series = (
-        filtered_df.groupby(filtered_df['fromdate'].dt.date)
-        .size()
-        .cumsum()
-        .reset_index()
-    )
-    time_series.columns = ['date', 'count']
+fig5.update_layout(
+    yaxis_tickformat=',',
+    plot_bgcolor='white'
+)
 
-    fig3 = px.line(
-        time_series,
-        x='date',
-        y='count',
-        markers=True
-    )
+st.plotly_chart(fig5, use_container_width=True)
 
-    st.plotly_chart(fig3, use_container_width=True)
-
-
-# 4. Top Countries (Bar Chart)
-with col4:
-    st.subheader("Top 10 Countries")
-
-    top_loc = (
-        filtered_df['country']
-        .value_counts()
-        .head(10)
-        .sort_values()
-        .reset_index()
-    )
-    top_loc.columns = ['country', 'count']
-
-    fig4 = px.bar(
-        top_loc,
-        x='count',
-        y='country',
-        orientation='h',
-        color='count',
-        color_continuous_scale='Reds'
-    )
-
-    st.plotly_chart(fig4, use_container_width=True)
 st.markdown("---")
 st.markdown(
     "<center>Built using Streamlit | Earthquake Analytic Dashboard By Bikash Dahal</center>",
+    unsafe_allow_html=True
+)
+
     unsafe_allow_html=True
 )
