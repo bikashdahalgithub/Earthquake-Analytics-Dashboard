@@ -310,6 +310,3 @@ st.markdown(
     "<center>Built using Streamlit | Earthquake Analytic Dashboard By Bikash Dahal</center>",
     unsafe_allow_html=True
 )
-
-    unsafe_allow_html=True
-)
