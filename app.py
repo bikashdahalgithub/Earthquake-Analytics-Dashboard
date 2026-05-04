@@ -164,8 +164,7 @@ st.markdown("---")
 # -------------------- EDA --------------------
 # Centered EDA heading
 st.markdown(
-    "<h2 style='text-align:center; margin-bottom:24px;'>Exploratory Data Analysis</h2>",
-    unsafe_allow_html=True
+    "<h2 style='text-align:center; margin-bottom:24px;'>Exploratory Data Analysis</h2>",unsafe_allow_html=True
 )
 
 # ---- ROW 1: Top Countries + Earthquakes Over Time ----
