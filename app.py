@@ -111,11 +111,21 @@ def kpi_card(title, value):
         </div>
     </div>
     """
+# New function for short format
+def format_number(n):
+    if n >= 1_000_000_000:
+        return f"{n/1_000_000_000:.1f}B"
+    elif n >= 1_000_000:
+        return f"{n/1_000_000:.1f}M"
+    elif n >= 1_000:
+        return f"{n/1_000:.1f}K"
+    else:
+        return str(int(n))
 
 total_eq = len(filtered_df)
 
 population_affected = (
-    f"{int(filtered_df['population'].sum()):,}"
+    format_number(filtered_df['population'].sum())
     if 'population' in filtered_df.columns else "N/A"
 )
 
@@ -164,7 +174,8 @@ st.markdown("---")
 # -------------------- EDA --------------------
 # Centered EDA heading
 st.markdown(
-    "<h2 style='text-align:center; margin-bottom:24px;'>Exploratory Data Analysis</h2>",unsafe_allow_html=True
+    "<h2 style='text-align:center; margin-bottom:24px;'>Exploratory Data Analysis</h2>",
+    unsafe_allow_html=True
 )
 
 # ---- ROW 1: Top Countries + Earthquakes Over Time ----
@@ -310,3 +321,4 @@ st.markdown(
     "<center>Built using Streamlit | Earthquake Analytic Dashboard By Bikash Dahal</center>",
     unsafe_allow_html=True
 )
+
